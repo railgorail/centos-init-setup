@@ -1,0 +1,103 @@
+---
+- name: Initial secure setup CentOS 9
+  hosts: servers
+  become: true
+
+  vars:
+    # Replace with your actual username
+    new_user: username
+    # Replace with your actual public key
+    # cat ~/.ssh/id_ed25519.pub
+    ssh_public_key: "ssh-ed25519 ...LONGKEY... e@e.e"
+
+  tasks:
+    - name: Update system
+      dnf:
+        name: "*"
+        state: latest
+      register: update_result
+
+    - name: Reboot if needed
+      reboot:
+      when: update_result.changed
+
+    - name: Install dnf-automatic
+      dnf:
+        name: dnf-automatic
+        state: present
+
+    - name: Enable automatic updates
+      systemd:
+        name: dnf-automatic.timer
+        enabled: true
+        state: started
+
+    - name: Create sudo user
+      user:
+        name: "{{ new_user }}"
+        groups: wheel
+        append: yes
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Set authorized key
+      authorized_key:
+        user: "{{ new_user }}"
+        key: "{{ ssh_public_key }}"
+
+    - name: Disable root SSH login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PermitRootLogin"
+        line: "PermitRootLogin no"
+        create: yes
+
+    - name: Disable password authentication
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PasswordAuthentication"
+        line: "PasswordAuthentication no"
+        create: yes
+
+    - name: Ensure PubkeyAuthentication enabled
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PubkeyAuthentication"
+        line: "PubkeyAuthentication yes"
+        create: yes
+
+    - name: Find sshd_config.d files
+      find:
+        paths: /etc/ssh/sshd_config.d
+        patterns: "*.conf"
+      register: sshd_conf_d_files
+
+    - name: Remove any conflicting PermitRootLogin in sshd_config.d
+      lineinfile:
+        path: "{{ item.path }}"
+        regexp: "^PermitRootLogin"
+        state: absent
+      loop: "{{ sshd_conf_d_files.files }}"
+      when: sshd_conf_d_files.matched > 0
+
+    - name: Set PermitRootLogin no in main sshd_config
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PermitRootLogin"
+        line: "PermitRootLogin no"
+        create: yes
+        backup: yes
+
+    - name: Restart sshd to apply changes
+      systemd:
+        name: sshd
+        state: restarted
+        daemon_reload: yes
+
+    - name: Add PS1
+      lineinfile:
+        path: /home/{{ new_user }}/.bashrc
+        regexp: "^PS1="
+        line: "PS1='\\[\\e[44;36m\\]\\t:[\\w]\\[\\e[0;0m\\]\\n\\[\\e[0;31;04m\\]\\u\\[\\e[0;0m\\]@\\[\\e[0;32m\\]\\h\\[\\e[0;0m\\] \\$ '"
+        state: present
+        create: yes
