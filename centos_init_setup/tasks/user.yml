@@ -1,0 +1,22 @@
+---
+# tasks file for user
+- name: Create sudo user
+  user:
+    name: "{{ new_user }}"
+    groups: wheel
+    append: yes
+    shell: /bin/bash
+    create_home: yes
+
+- name: Set authorized key from file
+  authorized_key:
+    user: "{{ new_user }}"
+    key: "{{ lookup('file', ssh_public_key_file) }}"
+  when: ssh_public_key_file is defined and ssh_public_key_file
+
+- name: Set authorized key from variable
+  authorized_key:
+    user: "{{ new_user }}"
+    key: "{{ ssh_public_key }}"
+  when: ssh_public_key is defined and ssh_public_key
+

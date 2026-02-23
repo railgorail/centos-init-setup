@@ -1,0 +1,42 @@
+---
+# tasks file for shell
+- name: Set PS1
+  lineinfile:
+    path: /home/{{ new_user }}/.bashrc
+    regexp: '^export PS1='
+    line: "export PS1='\\[\\e[44;36m\\]\\t:[\\w]\\[\\e[0;0m\\]\\n\\[\\e[0;31;04m\\]\\u\\[\\e[0;0m\\]@\\[\\e[0;32m\\]\\h\\[\\e[0;0m\\] \\$ '"
+    state: present
+    create: yes
+    owner: "{{ new_user }}"
+    mode: '0644'
+
+- name: Create .bashrc.d directory
+  file:
+    path: /home/{{ new_user }}/.bashrc.d
+    state: directory
+    owner: "{{ new_user }}"
+    mode: '0755'
+
+- name: Source .bashrc.d in .bashrc
+  blockinfile:
+    path: /home/{{ new_user }}/.bashrc
+    block: |
+      if [ -d ~/.bashrc.d ]; then
+        for i in ~/.bashrc.d/*.sh;
+          do
+          if [ -r $i ]; then
+            . $i
+          fi
+        done
+      fi
+    marker: "# {mark} ANSIBLE MANAGED BLOCK for .bashrc.d"
+    owner: "{{ new_user }}"
+    mode: '0644'
+
+- name: Add aliases
+  copy:
+    dest: /home/{{ new_user }}/.bashrc.d/aliases.sh
+    content: |
+      alias ll='ls -laFh'
+    owner: "{{ new_user }}"
+    mode: '0644'

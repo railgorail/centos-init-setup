@@ -1,0 +1,22 @@
+---
+# tasks file for system
+- name: Update system
+  dnf:
+    name: "*"
+    state: latest
+  register: update_result
+
+- name: Reboot if needed
+  reboot:
+  when: update_result.changed
+
+- name: Install dnf-automatic
+  dnf:
+    name: dnf-automatic
+    state: present
+
+- name: Enable automatic updates
+  systemd:
+    name: dnf-automatic.timer
+    enabled: true
+    state: started

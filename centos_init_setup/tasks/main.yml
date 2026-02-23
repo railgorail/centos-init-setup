@@ -1,0 +1,13 @@
+---
+# tasks file for centos_init_setup
+# - name: System
+#   import_tasks: system.yml
+
+- name: User
+  import_tasks: user.yml
+
+- name: Ssh
+  import_tasks: ssh.yml
+
+- name: Shell
+  import_tasks: shell.yml

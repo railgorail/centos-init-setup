@@ -1,0 +1,50 @@
+---
+# tasks file for ssh
+- name: Disable root SSH login
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PermitRootLogin"
+    line: "PermitRootLogin no"
+    create: yes
+
+- name: Disable password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PasswordAuthentication"
+    line: "PasswordAuthentication no"
+    create: yes
+
+- name: Ensure PubkeyAuthentication enabled
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PubkeyAuthentication"
+    line: "PubkeyAuthentication yes"
+    create: yes
+
+- name: Find sshd_config.d files
+  find:
+    paths: /etc/ssh/sshd_config.d
+    patterns: "*.conf"
+  register: sshd_conf_d_files
+
+- name: Remove any conflicting PermitRootLogin in sshd_config.d
+  lineinfile:
+    path: "{{ item.path }}"
+    regexp: "^PermitRootLogin"
+    state: absent
+  loop: "{{ sshd_conf_d_files.files }}"
+  when: sshd_conf_d_files.matched > 0
+
+- name: Set PermitRootLogin no in main sshd_config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PermitRootLogin"
+    line: "PermitRootLogin no"
+    create: yes
+    backup: yes
+
+- name: Restart sshd to apply changes
+  systemd:
+    name: sshd
+    state: restarted
+    daemon_reload: yes

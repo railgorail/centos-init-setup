@@ -1,0 +1,5 @@
+---
+# defaults file for centos_init_setup
+new_user: username
+ssh_public_key: ""
+ssh_public_key_file: "~/.ssh/id_rsa.pub"
